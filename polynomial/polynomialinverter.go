@@ -32,7 +32,7 @@ type Inverter interface {
 // polynomial in the ring (Z/pZ)[X]/(X^N-1) for some prime p.
 type InverterModPrime struct {
 	// prime is the modulus.
-	prime int16
+	prime int
 
 	// invModPrime is a table of inverses mod prime, setup so that
 	// invModPrime[i] * i = 1 (mod prime) if the inverse of i exists, and
@@ -42,11 +42,11 @@ type InverterModPrime struct {
 
 // modPrime returns x mod prime, always in the range [0..prime-1].
 func (v *InverterModPrime) modPrime(x int16) int16 {
-	x = x % v.prime
-	if x < 0 {
-		x += v.prime
+	ret := int(x) % v.prime
+	if ret < 0 {
+		ret += v.prime
 	}
-	return x
+	return int16(ret)
 }
 
 // Invert computes the inverse of a polynomial in (Z/pZ)[X]/(X^N-1).
@@ -57,6 +57,7 @@ func (v *InverterModPrime) Invert(a *Full) *Full {
 
 	// Initialization:
 	// k = 0, B(X) = 1, C(X) = 0, f(X)=a(X), g(X)=X^N-1
+	k := 0
 	b := New(N + 1)
 	c := New(N + 1)
 	f := New(N + 1)
@@ -66,7 +67,7 @@ func (v *InverterModPrime) Invert(a *Full) *Full {
 		f.P[i] = v.modPrime(a.P[i])
 	}
 	g.P[N] = 1
-	g.P[0] = v.prime - 1
+	g.P[0] = int16(v.prime - 1)
 
 	// Find the degree of f(X).
 	df := f.getDegree()
@@ -74,7 +75,6 @@ func (v *InverterModPrime) Invert(a *Full) *Full {
 	// Find the degre of g(X).  This is a constant based on initialization.
 	dg := N
 
-	k := 0
 	for {
 		// while f[0] = 0 {f/=X, c*=X, k++}
 		for f.P[0] == 0 && df > 0 {
@@ -106,9 +106,10 @@ func (v *InverterModPrime) Invert(a *Full) *Full {
 		}
 
 		if df < dg {
-			// swap(f,g), swap(b,c)
+			// swap(f,g), swap(b,c), swap(df, dg)
 			f, g = g, f
 			b, c = c, b
+			df, dg = dg, df
 		}
 
 		// u = f[0] * g[0]inv mod p
@@ -128,7 +129,7 @@ func (v *InverterModPrime) Invert(a *Full) *Full {
 
 // NewInverterModPrime constructs a new InverterModPrime with the given prime
 // and table of inverses mod prime.
-func NewInverterModPrime(prime int16, invModPrime []int16) *InverterModPrime {
+func NewInverterModPrime(prime int, invModPrime []int16) *InverterModPrime {
 	return &InverterModPrime{prime: prime, invModPrime: invModPrime}
 }
 
@@ -172,7 +173,7 @@ func (v *InverterModPowerOfPrime) Invert(a *Full) *Full {
 
 // NewInverterModPowerOfPrime constructs a new InverterModPowerOfPrime with the
 // given exponent, prime and table of inverses mod prime.
-func NewInverterModPowerOfPrime(powerOfPrime, prime int16, invModPrime []int16) *InverterModPowerOfPrime {
+func NewInverterModPowerOfPrime(powerOfPrime int16, prime int, invModPrime []int16) *InverterModPowerOfPrime {
 	v := &InverterModPowerOfPrime{powerOfPrime: powerOfPrime}
 	v.primeInv = NewInverterModPrime(prime, invModPrime)
 	return v

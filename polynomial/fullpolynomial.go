@@ -40,20 +40,20 @@ func (a *Full) getDegree() (df int) {
 
 // divideByX divides f(X) by the polynomial g(X) = X.
 func (a *Full) divideByX() {
-	fn := a.P[0]
+	f0 := a.P[0]
 	for i := 0; i < len(a.P)-1; i++ {
 		a.P[i] = a.P[i+1]
 	}
-	a.P[len(a.P)-1] = fn
+	a.P[len(a.P)-1] = f0
 }
 
 // multiplyByX multiplys the f(X) by the polynomial g(X) = X.
 func (a *Full) multiplyByX() {
-	fn := a.P[len(a.P)-1]
+	f0 := a.P[len(a.P)-1]
 	for i := len(a.P) - 1; i > 0; i-- {
 		a.P[i] = a.P[i-1]
 	}
-	a.P[0] = fn
+	a.P[0] = f0
 }
 
 // recenterModQ recenters the coefficients of a polynomial into the range

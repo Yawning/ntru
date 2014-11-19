@@ -137,6 +137,7 @@ func (pub *PublicKey) convPolyTrinaryToBinary(trin *polynomial.Full) (b []byte) 
 		i += 16
 		j += 3
 	}
+	b[len(b)-1] = 0
 	return
 }
 
@@ -317,8 +318,10 @@ func (priv *PrivateKey) verifyMFormat(m []byte) int {
 	if len(m) >= int(db+priv.Params.LLen) {
 		mLen = priv.parseMsgLengthFromM(m)
 	}
-	if mLen <= 0 || mLen >= priv.Params.MaxMsgLenBytes {
-		// XXX/Yawning: Original code does mLen < 0, when the error value is 0.
+	if mLen <= 0 || mLen > priv.Params.MaxMsgLenBytes {
+		// XXX/Yawning:
+		//  * Original code does mLen < 0, when the error value is 0.
+		//  * Original code does mLen >= priv.Params.MaxMsgLenBytes.
 		//
 		// mLen = 1 so that later steps will work (though we will return an
 		// error).
@@ -675,12 +678,14 @@ func convPolyTrinaryToBinaryBlockHelper(tOffset int, trit []int16, bOffset int, 
 	// Break the integer into bytes and put into the bits[] array.
 	if bOffset < len(bits) {
 		bits[bOffset] = byte(val >> 16)
+		bOffset++
 	}
-	if bOffset+1 < len(bits) {
-		bits[bOffset+1] = byte(val >> 8)
+	if bOffset < len(bits) {
+		bits[bOffset] = byte(val >> 8)
+		bOffset++
 	}
-	if bOffset+2 < len(bits) {
-		bits[bOffset+2] = byte(val)
+	if bOffset < len(bits) {
+		bits[bOffset] = byte(val)
 	}
 }
 

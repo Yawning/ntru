@@ -25,12 +25,167 @@ package ntru
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/binary"
+	"hash"
 	"testing"
 
 	"github.com/yawning/ntru/params"
 	"github.com/yawning/ntru/polynomial"
 	"github.com/yawning/ntru/testvectors"
 )
+
+// hashDrbg is a Hash_DRBG using SHA256.  It is included here because it is the
+// entropy source (with a known seed) used for key generation, and should not
+// be used for anything apart from testing.
+type hashDrbg struct {
+	mHash hash.Hash
+	v     []byte
+	c     []byte
+	ctr   uint32
+}
+
+func newHashDrbg(seed []byte) (h *hashDrbg) {
+	t := []byte{
+		0xcf, 0x83, 0xe1, 0x35, 0x7e, 0xef, 0xb8,
+		0xbd, 0xf1, 0x54, 0x28, 0x50, 0xd6, 0x6d,
+		0x80, 0x07, 0xd6, 0x20, 0xe4, 0x05, 0x0b,
+		0x57, 0x15, 0xdc, 0x83, 0xf4, 0xa9, 0x21,
+		0xd3, 0x6c, 0xe9, 0xce, 0x47, 0xd0, 0xd1,
+		0x3c, 0x5d, 0x85, 0xf2, 0xb0, 0xff, 0x83,
+		0x18, 0xd2, 0x87, 0x7e, 0xec, 0x2f, 0x63,
+		0xb9, 0x31, 0xbd, 0x47, 0x41, 0x7a, 0x81,
+		0xa5, 0x38, 0x32, 0x7a, 0xf9, 0x27, 0xda,
+		0x3e,
+	}
+
+	h = &hashDrbg{mHash: sha256.New(), ctr: 1}
+	if len(seed) != h.mHash.Size() {
+		panic("drbg: invalid seed length")
+	}
+	h.v = make([]byte, len(seed))
+	copy(h.v, seed)
+	h.mHash.Write(t[:h.mHash.Size()])
+	h.mHash.Write(h.v)
+	h.c = h.mHash.Sum(nil)
+	h.mHash.Reset()
+
+	return
+}
+
+func (h *hashDrbg) Read(out []byte) (int, error) {
+	h.hashGen(out)
+
+	suffixLen := len(out)
+	if suffixLen > len(h.v) {
+		suffixLen = len(h.v)
+	}
+
+	h.plusEquals(h.c)
+	h.plusEquals(out[:suffixLen])
+	h.plusEqualsUint32(h.v, h.ctr)
+	h.ctr++
+
+	return len(out), nil
+}
+
+func (h *hashDrbg) ReadByte() (c byte, err error) {
+	var tmp [1]byte
+	_, err = h.Read(tmp[:])
+	if err != nil {
+		return 0, err
+	}
+	c = tmp[0]
+	return
+}
+
+func (h *hashDrbg) hashGen(out []byte) {
+	// offset is always 0 for us.
+	offset := 0
+	l := len(out)
+
+	hLen := h.mHash.Size()
+	vtmp := make([]byte, hLen)
+	copy(vtmp, h.v)
+	for l > hLen {
+		h.mHash.Write(vtmp)
+		stmp := h.mHash.Sum(nil)
+		h.mHash.Reset()
+		copy(out[offset:], stmp)
+		offset += hLen
+		l -= hLen
+		h.plusEqualsUint32(vtmp, 1)
+	}
+
+	h.mHash.Write(vtmp)
+	stmp := h.mHash.Sum(nil)
+	h.mHash.Reset()
+	copy(out[offset:], stmp)
+}
+
+func (h *hashDrbg) plusEqualsUint32(dst []byte, i uint32) {
+	dstLen := len(dst)
+	tmp := binary.BigEndian.Uint32(dst[dstLen-4 : dstLen])
+	tmp += i
+	binary.BigEndian.PutUint32(dst[dstLen-4:dstLen], tmp)
+}
+
+func (h *hashDrbg) plusEquals(src []byte) {
+	carry := 0
+	i, j := len(src)-1, len(h.v)-1
+	for i >= 0 && j >= 0 {
+		carry += int(h.v[j]) + int(src[i])
+		h.v[j] = byte(carry)
+		carry >>= 8
+		j--
+		i--
+	}
+}
+
+func TestHashDrbg(t *testing.T) {
+	seed := []byte{
+		0xe3, 0xb2, 0x01, 0xa9, 0xf5, 0xb7, 0x1a, 0x7a,
+		0x9b, 0x1c, 0xea, 0xec, 0xcd, 0x97, 0xe7, 0x0b,
+		0x61, 0x76, 0xaa, 0xd9, 0xa4, 0x42, 0x8a, 0xa5,
+		0x48, 0x43, 0x92, 0xfb, 0xc1, 0xb0, 0x99, 0x51,
+	}
+	drbg := newHashDrbg(seed)
+	n := make([]byte, 80)
+
+	ans_1 := []byte{
+		0x1a, 0xbf, 0x2e, 0xb1, 0xcb, 0x32, 0xa8, 0xf5,
+		0xfb, 0x4b, 0xdd, 0xef, 0x8f, 0x70, 0xc6, 0x20,
+		0xc7, 0x47, 0x7e, 0xd9, 0x7a, 0xab, 0xf5, 0x87,
+		0x81, 0xd6, 0x82, 0xbc, 0xf3, 0xa2, 0x58, 0x71,
+		0xa1, 0x7b, 0x37, 0xa4, 0xa4, 0x5b, 0x17, 0xcd,
+		0x4b, 0xb5, 0x5b, 0x2e, 0x95, 0xc0, 0xb4, 0xbc,
+		0xda, 0xbc, 0x50, 0xd0, 0x0f, 0x38, 0x08, 0x87,
+		0x0d, 0xfe, 0x7a, 0x96, 0x02, 0x70, 0x79, 0x1e,
+		0x89, 0xff, 0x93, 0xb6, 0x0f, 0x21, 0xcc, 0x27,
+		0xf1, 0xcc, 0x48, 0xd0, 0xc8, 0x6f, 0x49, 0xd1,
+	}
+	drbg.Read(n)
+	if bytes.Compare(ans_1, n) != 0 {
+		t.Errorf("ans_1 != n")
+	}
+
+	ans_2 := []byte{
+		0x3f, 0x3a, 0xdd, 0x70, 0x14, 0xbd, 0x71, 0x90,
+		0xf1, 0x75, 0x5b, 0xe2, 0x25, 0x99, 0xb6, 0xc9,
+		0xc9, 0x01, 0x95, 0xbe, 0x27, 0x48, 0x71, 0x0b,
+		0x8b, 0x9e, 0xd4, 0x87, 0x36, 0x8f, 0xe7, 0x58,
+		0x38, 0xe4, 0x40, 0xb3, 0x99, 0x85, 0x03, 0x9a,
+		0x21, 0xda, 0x07, 0xee, 0xdf, 0xdc, 0x6f, 0xa9,
+		0x7f, 0x2a, 0xf6, 0x93, 0x2d, 0x11, 0x9a, 0x6b,
+		0x1f, 0x2a, 0xff, 0xac, 0x7e, 0x14, 0xa8, 0x1b,
+		0x3c, 0x8a, 0x4f, 0xb1, 0x07, 0x98, 0xe4, 0x94,
+		0x06, 0xf3, 0x68, 0xa3, 0x41, 0xfa, 0x0c, 0xd3,
+	}
+	drbg.Read(n)
+	if bytes.Compare(ans_2, n) != 0 {
+		t.Errorf("ans_2 != n")
+	}
+}
 
 func TestGenerateM(t *testing.T) {
 	for oid, vec := range testvectors.TestVectors {
@@ -351,13 +506,6 @@ func TestVerifyMFormat(t *testing.T) {
 	}
 }
 
-func TestGenerateKey(t *testing.T) {
-	_, err := GenerateKey(rand.Reader, params.EES1171EP1)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func TestPublicKeySerialize(t *testing.T) {
 	for oid, vec := range testvectors.TestVectors {
 		pub := &PublicKey{Params: params.Param(oid)}
@@ -429,6 +577,31 @@ func TestPrivateKeySerialize(t *testing.T) {
 	}
 }
 
+func TestGenerateKey(t *testing.T) {
+	for oid, vec := range testvectors.TestVectors {
+		priv := &PrivateKey{}
+		priv.Params = params.Param(oid)
+		priv.H = polynomial.NewFromCoeffs(vec.H)
+		priv.F = polynomial.NewFromCoeffs(vec.Ff)
+
+		rng := newHashDrbg(vec.KeygenSeed)
+		genPriv, err := GenerateKey(rng, oid)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if genPriv.Params != priv.Params {
+			t.Errorf("[%d]: GenerateKey param mismatch", oid)
+		}
+		if !testvectors.ArrayEquals(vec.H, genPriv.H.P) {
+			t.Errorf("[%d]: GenerateKey H mismatch", oid)
+		}
+		if !testvectors.ArrayEquals(vec.Ff, genPriv.F.P) {
+			t.Errorf("[%d]: GenerateKey F mismatch", oid)
+		}
+	}
+}
+
 func TestEncrypt(t *testing.T) {
 	for oid, vec := range testvectors.TestVectors {
 		pub := &PublicKey{Params: params.Param(oid)}
@@ -459,6 +632,30 @@ func TestDecrypt(t *testing.T) {
 		if bytes.Compare(out, vec.M) != 0 {
 			t.Errorf("[%d]: out != vec.M", oid)
 		}
+	}
+}
+
+func TestIntegration(t *testing.T) {
+	keypair, err := GenerateKey(rand.Reader, params.EES1171EP1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	blen := keypair.Params.MaxMsgLenBytes
+	plaintext := make([]byte, blen)
+	rand.Reader.Read(plaintext)
+
+	ciphertext, err := Encrypt(rand.Reader, &keypair.PublicKey, plaintext)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	plaintext2, err := Decrypt(keypair, ciphertext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Compare(plaintext, plaintext2) != 0 {
+		t.Fatal("plaintext != plaintext2")
 	}
 }
 
