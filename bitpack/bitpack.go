@@ -24,6 +24,10 @@
 // integers into byte arrays.
 package bitpack
 
+import (
+	"github.com/yawning/ntru/polynomial"
+)
+
 // CountBits calculates the smallest number of bits necessary to represent a
 // value.
 func CountBits(value int) uint {
@@ -91,6 +95,34 @@ func PackN(numElts, maxEltValue, maxOutLen int, src []int16, srcOffset int, tgt 
 	return j - tgtOffset
 }
 
+// PackListedCoefficients bit-packs a polynomial into a listed representation.
+func PackListedCoefficients(f *polynomial.Full, numOnes, numNegOnes int, out []byte, offset int) int {
+	if out == nil {
+		return PackedLength(numOnes+numNegOnes, len(f.P))
+	}
+
+	coefficients := make([]int16, numOnes+numNegOnes)
+	ones, negOnes := 0, numOnes
+	for i, v := range f.P {
+		switch v {
+		case 1:
+			coefficients[ones] = int16(i)
+			ones++
+		case -1:
+			coefficients[negOnes] = int16(i)
+			negOnes++
+		}
+	}
+	bpe := int(CountBits(len(f.P) - 1))
+	maxL := ((numOnes+numNegOnes)*bpe + 7) / 8
+	l := PackN(numOnes+numNegOnes, len(f.P), maxL, coefficients, 0, out, offset)
+
+	for i := range coefficients {
+		coefficients[i] = 0
+	}
+	return l
+}
+
 // UnpackedLength returns the number of elements that will be produced from
 // unpacking a given binary.
 func UnpackedLength(numElts, maxEltValue int) int {
@@ -146,6 +178,24 @@ func Unpack(numElts, maxEltValue int, src []byte, srcOffset int, tgt []int16, tg
 		}
 	}
 	return maxUsed
+}
+
+// UnpackListedCoefficients unpacks a listed representation into a polynomial.
+func UnpackListedCoefficients(f *polynomial.Full, n, numOnes, numNegOnes int, in []byte, offset int) int {
+	coefficients := make([]int16, numOnes+numNegOnes)
+	l := Unpack(len(coefficients), n, in, offset, coefficients, 0)
+	f.Obliterate()
+	for i := 0; i < numOnes; i++ {
+		f.P[coefficients[i]] = 1
+	}
+	for i := numOnes; i < len(coefficients); i++ {
+		f.P[coefficients[i]] = -1
+	}
+
+	for i := range coefficients {
+		coefficients[i] = 0
+	}
+	return l
 }
 
 // lowBitMask returns an integer that can be used to mask off the low numBits of

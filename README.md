@@ -14,5 +14,3 @@ along with the same "FOSS Licence Exception" that covers most popular FOSS licen
 
 Implementor's Notes:
  * Do not contact me about licensing/patent questions.
- * (BUG) Only the packed private key format is supported.  This BREAKS
-   INTEROPERABILITY and will be fixed.  This means, DON'T USE THIS YET.

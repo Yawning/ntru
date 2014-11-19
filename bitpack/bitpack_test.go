@@ -220,3 +220,6 @@ func TestUnpack(t *testing.T) {
 		}
 	}
 }
+
+// TODO: PackListedCoefficients
+// TODO: UnpackListedCoefficients

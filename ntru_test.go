@@ -30,8 +30,6 @@ import (
 	"github.com/yawning/ntru/params"
 	"github.com/yawning/ntru/polynomial"
 	"github.com/yawning/ntru/testvectors"
-
-	"fmt"
 )
 
 func TestGenerateM(t *testing.T) {
@@ -396,11 +394,20 @@ func TestPrivateKeySerialize(t *testing.T) {
 		priv.F = polynomial.NewFromCoeffs(vec.Ff)
 
 		// Hand-craft the expected blob based on the test vectors.
-		exp := make([]byte, 0, 4+len(vec.PackedH)+len(vec.PackedF))
-		exp = append(exp, blobPrivateKeyDefaultV1)
-		exp = append(exp, vec.OIDBytes...)
-		exp = append(exp, vec.PackedH...)
-		exp = append(exp, vec.PackedF...)
+		var exp []byte
+		if len(vec.PackedF) < len(vec.PackedListedF) {
+			exp = make([]byte, 0, 4+len(vec.PackedH)+len(vec.PackedF))
+			exp = append(exp, blobPrivateKeyDefaultV1)
+			exp = append(exp, vec.OIDBytes...)
+			exp = append(exp, vec.PackedH...)
+			exp = append(exp, vec.PackedF...)
+		} else {
+			exp = make([]byte, 0, 4+len(vec.PackedH)+len(vec.PackedListedF))
+			exp = append(exp, blobPrivateKeyDefaultV1)
+			exp = append(exp, vec.OIDBytes...)
+			exp = append(exp, vec.PackedH...)
+			exp = append(exp, vec.PackedListedF...)
+		}
 
 		// Test encode.
 		blob := priv.Bytes()
@@ -414,12 +421,10 @@ func TestPrivateKeySerialize(t *testing.T) {
 			t.Error(err)
 		}
 		if f.Params != priv.Params || !testvectors.ArrayEquals(vec.H, f.H.P) {
-			t.Fatalf("[%d]: decode: f != priv(pub)", oid)
+			t.Errorf("[%d]: decode: f != priv(pub)", oid)
 		}
 		if !testvectors.ArrayEquals(vec.Ff, f.F.P) {
-			fmt.Printf("vecF: %v\n", vec.Ff)
-			fmt.Printf("   F: %v\n", f.F.P)
-			t.Fatalf("[%d]: decode: f != priv", oid)
+			t.Errorf("[%d]: decode: f != priv", oid)
 		}
 	}
 }

@@ -183,7 +183,13 @@ type PrivateKey struct {
 
 // Size returns the length of the binary representation of this private key.
 func (priv *PrivateKey) Size() int {
-	return 1 + len(priv.Params.OIDBytes) + bitpack.PackedLength(int(priv.Params.N), int(priv.Params.Q)) + (len(priv.F.P)+4)/5
+	commonSize := 1 + len(priv.Params.OIDBytes) + bitpack.PackedLength(int(priv.Params.N), int(priv.Params.Q))
+	packedSize := priv.packedSize()
+	listedSize := priv.listedSize()
+	if priv.packedSize() < priv.listedSize() {
+		return commonSize + packedSize
+	}
+	return commonSize + listedSize
 }
 
 // Bytes returns the binary representation of a private key.
@@ -194,11 +200,15 @@ func (priv *PrivateKey) Bytes() []byte {
 	fOff := blobHeaderLen
 	fOff += bitpack.Pack(int(priv.Params.N), int(priv.Params.Q), priv.H.P, 0, ret, fOff)
 
-	// Convert f to a packed F, and write it out.
 	F := priv.recoverF()
-	fBuf := &bufByteRdWriter{b: ret, off: fOff}
-	mgftp1.EncodeTrinomial(F, fBuf)
-
+	if priv.packedSize() < priv.listedSize() {
+		// Convert f to a packed F, and write it out.
+		fBuf := &bufByteRdWriter{b: ret, off: fOff}
+		mgftp1.EncodeTrinomial(F, fBuf)
+	} else {
+		// Convert f to a listed f.
+		bitpack.PackListedCoefficients(F, int(priv.Params.Df), int(priv.Params.Df), ret, fOff)
+	}
 	F.Obliterate()
 
 	return ret
@@ -206,6 +216,8 @@ func (priv *PrivateKey) Bytes() []byte {
 
 // NewPrivateKey decodes a PrivateKey from it's binary representation.
 func NewPrivateKey(raw []byte) (*PrivateKey, error) {
+	priv := &PrivateKey{}
+
 	if len(raw) < blobHeaderLen {
 		return nil, fmt.Errorf("ntru: invalid private key blob length")
 	}
@@ -216,30 +228,52 @@ func NewPrivateKey(raw []byte) (*PrivateKey, error) {
 	if p == nil {
 		return nil, fmt.Errorf("ntru: unsupported parameter set")
 	}
+	priv.Params = p
 
+	expLen := 1 + len(priv.Params.OIDBytes) + bitpack.PackedLength(int(priv.Params.N), int(priv.Params.Q))
 	packedFLen := int((p.N + 4) / 5)
-	packedHLen := bitpack.UnpackedLength(int(p.N), int(p.Q))
-	if blobHeaderLen+packedHLen+packedFLen != len(raw) {
+	packedListedFLen := priv.listedSize()
+	if packedFLen < packedListedFLen {
+		expLen += packedFLen
+	} else {
+		expLen += packedListedFLen
+	}
+
+	if expLen != len(raw) {
 		return nil, fmt.Errorf("ntru: invalid private key blob length")
 	}
 
 	// Recover h.
 	fOff := blobHeaderLen
-	h := polynomial.New(int(p.N))
-	fOff += bitpack.Unpack(int(p.N), int(p.Q), raw, blobHeaderLen, h.P, 0)
+	priv.H = polynomial.New(int(p.N))
+	fOff += bitpack.Unpack(int(p.N), int(p.Q), raw, blobHeaderLen, priv.H.P, 0)
 
-	// Recover F, and compute f = 1+p*F.
-	fBuf := &bufByteRdWriter{b: raw, off: fOff}
-	f, _ := mgftp1.GenTrinomial(int(p.N), fBuf)
-	for i := range f.P {
-		f.P[i] = (p.P * f.P[i]) & 0xfff
+	// Recover F.
+	if packedFLen < packedListedFLen {
+		fBuf := &bufByteRdWriter{b: raw, off: fOff}
+		priv.F, _ = mgftp1.GenTrinomial(int(p.N), fBuf)
+	} else {
+		priv.F = polynomial.New(int(p.N))
+		bitpack.UnpackListedCoefficients(priv.F, int(p.N), int(p.Df), int(p.Df), raw, fOff)
 	}
-	f.P[0]++
 
-	priv := &PrivateKey{F: f}
-	priv.Params = p
-	priv.H = h
+	// Compute f = 1+p*F.
+	for i, v := range priv.F.P {
+		priv.F.P[i] = (p.P * v) & 0xfff
+	}
+	priv.F.P[0]++
+
 	return priv, nil
+}
+
+// packedSize returns the size of F encoded in the packed format.
+func (priv *PrivateKey) packedSize() int {
+	return (len(priv.F.P) + 4) / 5
+}
+
+// listedSize returns the size of F encoded in the listed format.
+func (priv *PrivateKey) listedSize() int {
+	return bitpack.PackedLength(2*int(priv.Params.Df), int(priv.Params.N))
 }
 
 // Calculate F = (f - 1) / p.
