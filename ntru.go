@@ -137,7 +137,6 @@ func (pub *PublicKey) convPolyTrinaryToBinary(trin *polynomial.Full) (b []byte) 
 		i += 16
 		j += 3
 	}
-	b[len(b)-1] = 0
 	return
 }
 
@@ -593,13 +592,13 @@ func convPolyBinaryToTrinary(outputDegree int, bin []byte) []int16 {
 
 	// Perform the bulk of the conversion in 3-byte blocks.
 	// 3 bytes == 24 bits --> 16 trits.
-	var val int
 	for i := 0; i < blocks; i++ {
-		val = int(bin[i*3])<<16 | int(bin[i*3+1])<<8 | int(bin[i*3+2])
+		val := int(bin[i*3])<<16 | int(bin[i*3+1])<<8 | int(bin[i*3+2])
 		convPolyBinaryToTrinaryHelper2(outputDegree, 16*i, tri, val)
 	}
 
 	// Convert any partial block left at the end of the input buffer
+	val := 0
 	if remainder > 0 {
 		val |= int(bin[blocks*3]) << 16
 	}
