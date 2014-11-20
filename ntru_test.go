@@ -667,3 +667,45 @@ func BenchmarkGenerateKey_EES1171EP1(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkEncrypt_EES1171EP1(b *testing.B) {
+	priv, err := GenerateKey(rand.Reader, params.EES1171EP1)
+	if err != nil {
+		b.Fatal(err)
+	}
+	plaintext := make([]byte, priv.Params.MaxMsgLenBytes)
+	for i := range plaintext {
+		plaintext[i] = byte(i)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := Encrypt(rand.Reader, &priv.PublicKey, plaintext)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkDecrypt_EES1171EP1(b *testing.B) {
+	priv, err := GenerateKey(rand.Reader, params.EES1171EP1)
+	if err != nil {
+		b.Fatal(err)
+	}
+	plaintext := make([]byte, priv.Params.MaxMsgLenBytes)
+	for i := range plaintext {
+		plaintext[i] = byte(i)
+	}
+	ciphertext, err := Encrypt(rand.Reader, &priv.PublicKey, plaintext)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := Decrypt(priv, ciphertext)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
