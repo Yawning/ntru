@@ -659,17 +659,33 @@ func TestIntegration(t *testing.T) {
 	}
 }
 
-func BenchmarkGenerateKey_EES1171EP1(b *testing.B) {
+func benchGenerateKey(b *testing.B, oid params.Oid) {
+	// Do the actual key generation benchmark.
 	for i := 0; i < b.N; i++ {
-		_, err := GenerateKey(rand.Reader, params.EES1171EP1)
+		_, err := GenerateKey(rand.Reader, oid)
 		if err != nil {
 			b.Error(err)
 		}
 	}
 }
 
-func BenchmarkEncrypt_EES1171EP1(b *testing.B) {
-	priv, err := GenerateKey(rand.Reader, params.EES1171EP1)
+func BenchmarkGenerateKey_EES613EP1(b *testing.B) {
+	// Balanced 128 bit security target.
+	benchGenerateKey(b, params.EES613EP1)
+}
+
+func BenchmarkGenerateKey_EES887EP1(b *testing.B) {
+	// Balanced 192 bit security target.
+	benchGenerateKey(b, params.EES887EP1)
+}
+
+func BenchmarkGenerateKey_EES1171EP1(b *testing.B) {
+	// Balanced 256 bit security target.
+	benchGenerateKey(b, params.EES1171EP1)
+}
+
+func benchEncrypt(b *testing.B, oid params.Oid) {
+	priv, err := GenerateKey(rand.Reader, oid)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -687,8 +703,23 @@ func BenchmarkEncrypt_EES1171EP1(b *testing.B) {
 	}
 }
 
-func BenchmarkDecrypt_EES1171EP1(b *testing.B) {
-	priv, err := GenerateKey(rand.Reader, params.EES1171EP1)
+func BenchmarkEncrypt_EES613EP1(b *testing.B) {
+	// Balanced 128 bit security target.
+	benchEncrypt(b, params.EES613EP1)
+}
+
+func BenchmarkEncrypt_EES887EP1(b *testing.B) {
+	// Balanced 192 bit security target.
+	benchEncrypt(b, params.EES887EP1)
+}
+
+func BenchmarkEncrypt_EES1171EP1(b *testing.B) {
+	// Balanced 256 bit security target.
+	benchEncrypt(b, params.EES1171EP1)
+}
+
+func benchDecrypt(b *testing.B, oid params.Oid) {
+	priv, err := GenerateKey(rand.Reader, oid)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -708,4 +739,19 @@ func BenchmarkDecrypt_EES1171EP1(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+}
+
+func BenchmarkDecrypt_EES613EP1(b *testing.B) {
+	// Balanced 128 bit security target.
+	benchDecrypt(b, params.EES613EP1)
+}
+
+func BenchmarkDecrypt_EES887EP1(b *testing.B) {
+	// Balanced 192 bit security target.
+	benchDecrypt(b, params.EES887EP1)
+}
+
+func BenchmarkDecrypt_EES1171EP1(b *testing.B) {
+	// Balanced 256 bit security target.
+	benchDecrypt(b, params.EES1171EP1)
 }
