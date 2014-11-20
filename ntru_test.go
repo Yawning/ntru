@@ -451,8 +451,8 @@ func TestParseMsgLengthFromM(t *testing.T) {
 
 		// short_buffer()
 		m := make([]byte, priv.Params.Db/8-1)
-		if priv.parseMsgLengthFromM(m) != 0 {
-			t.Errorf("[%d]: short: parseMsgLengthFromM(m) != 0", oid)
+		if priv.parseMsgLengthFromM(m) != -1 {
+			t.Errorf("[%d]: short: parseMsgLengthFromM(m) != -1", oid)
 		}
 
 		// Positive case.

@@ -293,7 +293,7 @@ func (priv *PrivateKey) recoverF() *polynomial.Full {
 func (priv *PrivateKey) parseMsgLengthFromM(m []byte) (l int) {
 	db := priv.Params.Db >> 3
 	if len(m) < int(db+priv.Params.LLen) {
-		return
+		return -1
 	}
 	for i := db; i < db+priv.Params.LLen; i++ {
 		l = (l << 8) | int(m[i])
@@ -316,15 +316,16 @@ func (priv *PrivateKey) verifyMFormat(m []byte) int {
 	// 1) First db bytes are random data.
 
 	// 2) Next lLen bytes are the message length.  Decode and verify.
-	mLen := 0
-	if len(m) >= int(db+priv.Params.LLen) {
-		mLen = priv.parseMsgLengthFromM(m)
-	}
-	if mLen <= 0 || mLen > priv.Params.MaxMsgLenBytes {
-		// XXX/Yawning:
-		//  * Original code does mLen < 0, when the error value is 0.
-		//  * Original code does mLen >= priv.Params.MaxMsgLenBytes.
-		//
+	//
+	// XXX/Yawning This whole block is kind of broken in the Java code.
+	//  * It treats the short buffer case as the same as a 0 length msg (ok,
+	//    though confusing, since the total length check has failed and ok is
+	//    false at this point).
+	//  * It checks mLen >= priv.Params.MaxMsgLenBytes, which is blatantly
+	//    incorrect and will cause ciphertexts containing maximum length
+	//    payload to fail.
+	mLen := priv.parseMsgLengthFromM(m)
+	if mLen < 0 || mLen > priv.Params.MaxMsgLenBytes {
 		// mLen = 1 so that later steps will work (though we will return an
 		// error).
 		mLen = 1
