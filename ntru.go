@@ -62,6 +62,9 @@ var ErrMessageTooLong = errors.New("ntru: message too long for chosen parameter 
 // deliberately vague to avoid adaptive attacks.
 var ErrDecryption = errors.New("ntru: decryption error")
 
+// ErrInvalidKey is the error returned when the key is invalid.
+var ErrInvalidKey = errors.New("ntru: invalid key")
+
 // A PublicKey represents a NTRUEncrypt public key.
 type PublicKey struct {
 	Params *params.KeyParams
@@ -400,6 +403,9 @@ func GenerateKey(random io.Reader, oid params.Oid) (priv *PrivateKey, err error)
 // longer than the maximum allowed plaintext size that is depending on the
 // parameter set.
 func Encrypt(random io.Reader, pub *PublicKey, msg []byte) (out []byte, err error) {
+	if pub.Params == nil || pub.H == nil {
+		return nil, ErrInvalidKey
+	}
 	if pub.Params.MaxMsgLenBytes < len(msg) {
 		return nil, ErrMessageTooLong
 	}
@@ -456,6 +462,10 @@ func Encrypt(random io.Reader, pub *PublicKey, msg []byte) (out []byte, err erro
 
 // Decrypt decrypts the ciphertext using NTRUEncrypt.
 func Decrypt(priv *PrivateKey, ciphertext []byte) (out []byte, err error) {
+	if priv.Params == nil || priv.H == nil || priv.F == nil {
+		return nil, ErrInvalidKey
+	}
+
 	// TODO: Get rid of these casts.
 	expectedCTLength := bitpack.PackedLength(int(priv.Params.N), int(priv.Params.Q))
 	if len(ciphertext) != expectedCTLength {
