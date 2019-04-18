@@ -23,7 +23,7 @@
 package testvectors
 
 import (
-	"github.com/yawning/ntru/params"
+	"github.com/Wondertan/ntru/params"
 )
 
 // ees1171ep1 is the test vectors for EES1171EP1 (0.6.4)

@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/yawning/ntru/testvectors"
+	"github.com/Wondertan/ntru/testvectors"
 )
 
 func checkIGF(bitsPerElement int16, input []byte, expected []int16) error {

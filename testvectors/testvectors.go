@@ -25,7 +25,7 @@
 package testvectors
 
 import (
-	"github.com/yawning/ntru/params"
+	"github.com/Wondertan/ntru/params"
 )
 
 // TestVector contains test vector data for a single OID.

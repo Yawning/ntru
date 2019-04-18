@@ -25,7 +25,7 @@
 package bitpack
 
 import (
-	"github.com/yawning/ntru/polynomial"
+	"github.com/Wondertan/ntru/polynomial"
 )
 
 // CountBits calculates the smallest number of bits necessary to represent a

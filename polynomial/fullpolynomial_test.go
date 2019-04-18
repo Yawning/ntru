@@ -25,8 +25,8 @@ package polynomial
 import (
 	"testing"
 
-	"github.com/yawning/ntru/params"
-	"github.com/yawning/ntru/testvectors"
+	"github.com/Wondertan/ntru/params"
+	"github.com/Wondertan/ntru/testvectors"
 )
 
 func coeffEquals(a, b []int16) bool {

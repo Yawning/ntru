@@ -29,8 +29,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/yawning/ntru/polynomial"
-	"github.com/yawning/ntru/testvectors"
+	"github.com/Wondertan/ntru/polynomial"
+	"github.com/Wondertan/ntru/testvectors"
 )
 
 func TestDecodeSmall(t *testing.T) {

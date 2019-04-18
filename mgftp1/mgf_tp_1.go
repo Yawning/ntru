@@ -28,7 +28,7 @@ package mgftp1
 import (
 	"io"
 
-	"github.com/yawning/ntru/polynomial"
+	"github.com/Wondertan/ntru/polynomial"
 )
 
 // GenTrinomial generates a trinomial of degree N using the MGF-TP-1 algorithm

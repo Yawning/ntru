@@ -28,7 +28,7 @@ import (
 	"hash"
 	"io"
 
-	"github.com/yawning/ntru/mgf1"
+	"github.com/Wondertan/ntru/mgf1"
 )
 
 // IGF2 implements the IGF2 Index Generation Function defined in the X9.92 spec

@@ -30,9 +30,9 @@ import (
 	"hash"
 	"testing"
 
-	"github.com/yawning/ntru/params"
-	"github.com/yawning/ntru/polynomial"
-	"github.com/yawning/ntru/testvectors"
+	"github.com/Wondertan/ntru/params"
+	"github.com/Wondertan/ntru/polynomial"
+	"github.com/Wondertan/ntru/testvectors"
 )
 
 // hashDrbg is a Hash_DRBG using SHA256.  It is included here because it is the

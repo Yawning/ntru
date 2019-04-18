@@ -29,13 +29,13 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/yawning/ntru/bitpack"
-	"github.com/yawning/ntru/bpgm3"
-	"github.com/yawning/ntru/igf2"
-	"github.com/yawning/ntru/mgf1"
-	"github.com/yawning/ntru/mgftp1"
-	"github.com/yawning/ntru/params"
-	"github.com/yawning/ntru/polynomial"
+	"github.com/Wondertan/ntru/bitpack"
+	"github.com/Wondertan/ntru/bpgm3"
+	"github.com/Wondertan/ntru/igf2"
+	"github.com/Wondertan/ntru/mgf1"
+	"github.com/Wondertan/ntru/mgftp1"
+	"github.com/Wondertan/ntru/params"
+	"github.com/Wondertan/ntru/polynomial"
 )
 
 const (

@@ -24,8 +24,8 @@
 package bpgm3
 
 import (
-	"github.com/yawning/ntru/igf2"
-	"github.com/yawning/ntru/polynomial"
+	"github.com/Wondertan/ntru/igf2"
+	"github.com/Wondertan/ntru/polynomial"
 )
 
 // GenTrinomial generates a trinonial of degree N-1 that has numOnes

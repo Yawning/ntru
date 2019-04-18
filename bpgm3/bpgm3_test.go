@@ -26,10 +26,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/yawning/ntru/igf2"
-	"github.com/yawning/ntru/params"
-	"github.com/yawning/ntru/polynomial"
-	"github.com/yawning/ntru/testvectors"
+	"github.com/Wondertan/ntru/igf2"
+	"github.com/Wondertan/ntru/params"
+	"github.com/Wondertan/ntru/polynomial"
+	"github.com/Wondertan/ntru/testvectors"
 )
 
 func TestOddEven(t *testing.T) {

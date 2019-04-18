@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/yawning/ntru/testvectors"
+	"github.com/Wondertan/ntru/testvectors"
 )
 
 func TestLowBitMask(t *testing.T) {
