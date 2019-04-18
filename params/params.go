@@ -176,6 +176,11 @@ type KeyParams struct {
 	PkLen int
 }
 
+// NewParam receives and adds new custom parameter set
+func NewParam(param *KeyParams) {
+	keyParamMap[param.OID] = param
+}
+
 // Param returns the NTRUEncrypt parameters for a given parameter set.  The
 // datastructure returned from this should be treated as read-only.
 func Param(oid Oid) *KeyParams {
